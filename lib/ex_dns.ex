@@ -51,23 +51,30 @@ defmodule ExDns do
     ip
   end
 
+  @type supported_record_type :: :a | :ns | :cname
+
+  defp to_record_type(type) do
+    %{a: DnsRecord.type_a(), ns: DnsRecord.type_ns(), cname: DnsRecord.type_cname()}[type]
+  end
+
   @doc """
   Resolves a domain name to an IP address.
 
   ## Examples
 
-      iex> ExDns.resolve "twitter.com", ExDns.DnsRecord.type_a
+      iex> ExDns.resolve "twitter.com", :a
 
   ### CNAME example
 
-        iex> ExDns.resolve "www.facebook.com", ExDns.DnsRecord.type_a
+        iex> ExDns.resolve "www.facebook.com", :a
 
   """
 
+  @spec resolve(String.t(), supported_record_type(), :inet.ip4_address()) :: :inet.ip4_address()
   def resolve(domain_name, record_type, ns_ip \\ @a_root_ns_ip) do
     Logger.debug("Resolving #{inspect(domain_name)} with #{inspect(ns_ip)}")
 
-    query = build_query(domain_name, record_type)
+    query = build_query(domain_name, to_record_type(record_type))
     {:ok, socket} = :gen_udp.open(0, [:binary, {:active, false}])
     :gen_udp.send(socket, ns_ip, 53, query)
     {:ok, {_ip, _port, response}} = :gen_udp.recv(socket, 1024, 5000)
