@@ -30,4 +30,11 @@ defmodule ExDnsTest do
       assert :inet.is_ipv4_address(ip)
     end
   end
+
+  describe "resolve/3" do
+    test "Resolves CNAME records" do
+      ip = ExDns.resolve("www.facebook.com", :a)
+      assert :inet.is_ipv4_address(ip)
+    end
+  end
 end

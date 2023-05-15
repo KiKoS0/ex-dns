@@ -5,6 +5,8 @@ defmodule ExDns.DnsRecord do
   def type_a, do: @type_a
   @type_ns 2
   def type_ns, do: @type_ns
+  @type_cname 5
+  def type_cname, do: @type_cname
 
   @type_txt 16
   def type_txt, do: @type_txt
@@ -26,6 +28,7 @@ defmodule ExDns.DnsRecord do
       case type do
         @type_a -> ip_bytes_to_inet_ip(raw_data)
         @type_ns -> ExDns.DnsQuestion.decode_name(raw_data, all_bytes) |> elem(0)
+        @type_cname -> ExDns.DnsQuestion.decode_name(raw_data, all_bytes) |> elem(0)
         _ -> raw_data
       end
 

@@ -58,6 +58,10 @@ defmodule ExDns do
 
       iex> ExDns.resolve "twitter.com", ExDns.DnsRecord.type_a
 
+  ### CNAME example
+
+        iex> ExDns.resolve "www.facebook.com", ExDns.DnsRecord.type_a
+
   """
 
   def resolve(domain_name, record_type, ns_ip \\ @a_root_ns_ip) do
@@ -81,12 +85,16 @@ defmodule ExDns do
         ns_ip = resolve(ns.data, record_type)
         resolve(domain_name, record_type, ns_ip)
 
+      cname = get_cname(packet) ->
+        resolve(cname.data, record_type, ns_ip)
+
       true ->
         raise "Could not resolve #{inspect(domain_name)}"
     end
   end
 
   defp get_ip(packet), do: find_record_in(packet, :answers, DnsRecord.type_a())
+  defp get_cname(packet), do: find_record_in(packet, :answers, DnsRecord.type_cname())
   defp get_ns_ip(packet), do: find_record_in(packet, :additionals, DnsRecord.type_a())
   defp get_ns(packet), do: find_record_in(packet, :authorities, DnsRecord.type_ns())
 
