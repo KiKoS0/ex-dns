@@ -71,7 +71,12 @@ defmodule ExDns do
   """
 
   @spec resolve(String.t(), supported_record_type(), :inet.ip4_address()) :: :inet.ip4_address()
-  def resolve(domain_name, record_type, ns_ip \\ @a_root_ns_ip) do
+  def resolve(domain_name, record_type, ns_ip \\ @a_root_ns_ip, opts \\ []) do
+    cached = not Keyword.get(opts, :force, false) && ExDns.Cache.get(domain_name)
+    if cached, do: cached, else: do_resolve(domain_name, record_type, ns_ip, opts)
+  end
+
+  defp do_resolve(domain_name, record_type, ns_ip, opts) do
     Logger.debug("Resolving #{inspect(domain_name)} with #{inspect(ns_ip)}")
 
     query = build_query(domain_name, to_record_type(record_type))
@@ -83,17 +88,22 @@ defmodule ExDns do
 
     cond do
       ip = get_ip(packet) ->
+        ExDns.Cache.put(domain_name, ip.data, ip.ttl)
         ip.data
 
       ns_ip = get_ns_ip(packet) ->
-        resolve(domain_name, record_type, ns_ip.data)
+        resolve(domain_name, record_type, ns_ip.data, opts)
 
       ns = get_ns(packet) ->
-        ns_ip = resolve(ns.data, record_type)
-        resolve(domain_name, record_type, ns_ip)
+        ns_ip = resolve(ns.data, record_type, opts)
+        result = resolve(domain_name, record_type, ns_ip, opts)
+        ExDns.Cache.put(domain_name, result, ns.ttl)
+        result
 
       cname = get_cname(packet) ->
-        resolve(cname.data, record_type, ns_ip)
+        result = resolve(cname.data, record_type, ns_ip, opts)
+        ExDns.Cache.put(domain_name, result, cname.ttl)
+        result
 
       true ->
         raise "Could not resolve #{inspect(domain_name)}"
